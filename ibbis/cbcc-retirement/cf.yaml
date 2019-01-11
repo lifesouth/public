@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Outputs:
+  BucketAccessKey:
+    Value:
+      !Ref BucketUserAccessKey
+
+  BucketSecretAccessKey:
+    Value: !GetAtt BucketUserAccessKey.SecretAccessKey
+
+  Bucket:
+    Value: !Ref MyBucket
+
+Resources:
+  BucketUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Sub lifesouth-${AWS::Region}-${AWS::AccountId}
+
+  BucketUserAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName:
+        !Ref BucketUser
+
+  MyBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub lifesouth-${AWS::Region}-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: aws:kms
+      VersioningConfiguration:
+        Status: Enabled
+
+  MyBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref MyBucket
+      PolicyDocument:
+        Statement:
+        -
+          Action:
+          - s3:GetObject
+          - s3:PutObject
+          Effect: Allow
+          Resource: !Sub '${MyBucket.Arn}/*'
+          Principal:
+            AWS:
+            - !GetAtt BucketUser.Arn
+        -
+          Action:
+          - s3:ListBucket
+          Effect: "Allow"
+          Resource: !Sub '${MyBucket.Arn}'
+          Principal:
+            AWS:
+            - !GetAtt BucketUser.Arn
